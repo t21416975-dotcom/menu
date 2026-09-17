@@ -50,7 +50,7 @@ export function MenuCategoryNav({
         borderColor: "var(--menu-muted)",
       }}
     >
-      <nav className="mx-auto flex max-w-2xl gap-1.5 overflow-x-auto px-5 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav className="mx-auto flex max-w-3xl gap-2 overflow-x-auto px-4 py-3 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {categories.map((category) => {
           const isActive = activeId === category.id;
 

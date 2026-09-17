@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   EyeIcon,
   EyeOffIcon,
+  ImageIcon,
   Loader2Icon,
   PencilIcon,
   PlusIcon,
@@ -285,21 +286,45 @@ function ItemRow({
   onDelete: () => void;
 }) {
   return (
-    <li className="flex items-start justify-between gap-4 py-3">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium">{item.name}</span>
-          {!item.is_available && (
-            <Badge variant="secondary" className="text-[10px]">
-              غير متوفر
-            </Badge>
+    <li className="flex items-center justify-between gap-4 py-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        {item.image_url ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={item.image_url}
+            alt={item.name}
+            className="size-12 shrink-0 rounded-lg object-cover border bg-muted"
+            onError={(e) => {
+              (e.currentTarget as HTMLElement).style.display = "none";
+            }}
+          />
+        ) : (
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted/30 text-muted-foreground">
+            <ImageIcon className="size-5 opacity-40" />
+          </div>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">{item.name}</span>
+            {!item.is_available && (
+              <Badge variant="secondary" className="text-[10px]">
+                غير متوفر
+              </Badge>
+            )}
+            {item.image_url && (
+              <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                <ImageIcon className="size-2.5" />
+                صورة
+              </span>
+            )}
+          </div>
+          {item.description && (
+            <p className="mt-0.5 truncate text-sm text-muted-foreground">
+              {item.description}
+            </p>
           )}
         </div>
-        {item.description && (
-          <p className="mt-0.5 truncate text-sm text-muted-foreground">
-            {item.description}
-          </p>
-        )}
       </div>
 
       <div className="flex shrink-0 items-center gap-1">

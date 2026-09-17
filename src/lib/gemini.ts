@@ -5,8 +5,6 @@ import { GoogleGenAI } from "@google/genai";
 import type { ExtractedMenu, PaletteColors } from "./types";
 import { isPaletteAccessible } from "./theme";
 
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
-
 const EXTRACTION_SCHEMA = {
   type: "object",
   properties: {
@@ -77,10 +75,38 @@ const PALETTE_SCHEMA = {
   required: ["palettes"],
 };
 
+const FALLBACK_MODELS = [
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-pro",
+  "gemini-2.0-flash-lite",
+];
+
+function getModelCandidates(): string[] {
+  const envModel = process.env.GEMINI_MODEL?.trim();
+  const validEnvModel =
+    envModel && envModel !== "gemini-2.5-flash" ? envModel : null;
+
+  const list = [validEnvModel, ...FALLBACK_MODELS].filter(
+    (m): m is string => Boolean(m),
+  );
+  return Array.from(new Set(list));
+}
+
 export class GeminiNotConfiguredError extends Error {
   constructor() {
     super("GEMINI_API_KEY غير مهيأ");
     this.name = "GeminiNotConfiguredError";
+  }
+}
+
+export class GeminiRateLimitError extends Error {
+  constructor(message?: string) {
+    super(
+      message ??
+        "تم استنفاد حصة الاستخدام المؤقتة لـ Gemini (Rate Limit). يرجى الانتظار بضع ثوانٍ وإعادة المحاولة.",
+    );
+    this.name = "GeminiRateLimitError";
   }
 }
 
@@ -102,6 +128,83 @@ function parseJson<T>(text: string | undefined): T {
   return JSON.parse(cleaned) as T;
 }
 
+type GenerateContentParams = Omit<
+  Parameters<GoogleGenAI["models"]["generateContent"]>[0],
+  "model"
+>;
+
+async function executeWithModelFallback(
+  ai: GoogleGenAI,
+  params: GenerateContentParams,
+) {
+  const models = getModelCandidates();
+  let lastError: unknown = null;
+  let encounteredRateLimit = false;
+
+  for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: params.contents,
+          config: params.config,
+        });
+        return response;
+      } catch (err: unknown) {
+        lastError = err;
+        const message = String((err as { message?: string })?.message ?? "");
+        const status = (err as { status?: number; statusCode?: number })?.status ??
+          (err as { status?: number; statusCode?: number })?.statusCode;
+
+        const isRateLimit =
+          status === 429 ||
+          message.includes("429") ||
+          message.includes("RESOURCE_EXHAUSTED") ||
+          message.toLowerCase().includes("quota");
+
+        const isNotFound =
+          status === 404 ||
+          message.includes("404") ||
+          message.toLowerCase().includes("not found");
+
+        const isTransient =
+          status === 503 ||
+          status === 500 ||
+          message.includes("503") ||
+          message.toLowerCase().includes("overloaded");
+
+        if (isRateLimit) {
+          encounteredRateLimit = true;
+          // Wait 1.5 seconds then try fallback model or next attempt
+          await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1500));
+          continue;
+        }
+
+        if (isNotFound) {
+          // Model does not exist, immediately skip to next model
+          break;
+        }
+
+        if (isTransient && attempt === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+
+        // If another model might succeed, break to outer loop to try next model
+        break;
+      }
+    }
+  }
+
+  if (encounteredRateLimit) {
+    throw new GeminiRateLimitError();
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("تعذّر الاتصال بخدمة الذكاء الاصطناعي");
+}
+
 type RawExtraction = {
   categories?: {
     name?: string;
@@ -120,19 +223,18 @@ export async function extractMenuFromImage(
 ): Promise<ExtractedMenu> {
   const ai = getClient();
 
-  const response = await ai.models.generateContent({
-    model: MODEL,
+  const response = await executeWithModelFallback(ai, {
     contents: [
       {
         role: "user",
         parts: [
           {
             text: [
-              "أنت مساعد لتحويل صور قوائم المطاعم إلى بيانات منظمة.",
-              "اقرأ الصورة بدقة واستخرج كل قسم وكل طبق مع سعره.",
-              "أعد الأسعار كأرقام فقط دون رمز العملة.",
-              "حافظ على النصوص العربية كما هي دون ترجمة.",
-              "إذا كان العنصر غير واضح تماماً فتجاهله بدلاً من تخمينه.",
+              "أنت مساعد فائق الدقة لتحويل صور وقوائم طعام المطاعم إلى بيانات منظمة.",
+              "اقرأ الصورة بتمعن واستخرج كل قسم وكل طبق مع سعره ووصفه.",
+              "أعد الأسعار كأرقام فقط دون رمز العملة (مثلاً 25 بدلاً من 25 ر.س).",
+              "حافظ على النصوص باللغة الأصلية المكتوبة (مثل العربية).",
+              "إذا كان العنصر غير واضح فاستخرج ما تراه واضحاً.",
             ].join(" "),
           },
           { inlineData: { data: base64Data, mimeType } },
@@ -184,8 +286,7 @@ export async function suggestPalettes(input: {
 }): Promise<{ name: string; colors: PaletteColors }[]> {
   const ai = getClient();
 
-  const response = await ai.models.generateContent({
-    model: MODEL,
+  const response = await executeWithModelFallback(ai, {
     contents: [
       {
         role: "user",
@@ -205,7 +306,7 @@ export async function suggestPalettes(input: {
       },
     ],
     config: {
-      temperature: 0.9,
+      temperature: 0.8,
       responseMimeType: "application/json",
       responseJsonSchema: PALETTE_SCHEMA,
     },

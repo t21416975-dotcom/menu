@@ -53,81 +53,94 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const bytes = Buffer.from(await file.arrayBuffer());
 
-  // 1. Persist the original privately so the owner can revisit it later.
+  // 1. Persist the original if storage is configured, but don't block AI extraction if bucket fails.
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80) || "menu.jpg";
   const imagePath = `${user.id}/${Date.now()}-${safeName}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from("menu-uploads")
-    .upload(imagePath, bytes, { contentType: mimeType, upsert: false });
-
-  if (uploadError) {
-    return NextResponse.json(
-      { error: "تعذّر رفع الصورة" },
-      { status: 500 },
-    );
+  try {
+    await supabase.storage
+      .from("menu-uploads")
+      .upload(imagePath, bytes, { contentType: mimeType, upsert: false });
+  } catch {
+    // Storage persistence is non-blocking for live AI extraction
   }
 
   // 2. Create the job row before calling the model so failures are traceable.
-  const { data: job, error: jobError } = await supabase
-    .from("extraction_jobs")
-    .insert({
-      restaurant_id: restaurant.id,
-      created_by: user.id,
-      image_path: imagePath,
-      status: "processing",
-    })
-    .select("id")
-    .single();
-
-  if (jobError || !job) {
-    return NextResponse.json({ error: "تعذّر إنشاء المهمة" }, { status: 500 });
+  let jobId: string | null = null;
+  try {
+    const { data: job } = await supabase
+      .from("extraction_jobs")
+      .insert({
+        restaurant_id: restaurant.id,
+        created_by: user.id,
+        image_path: imagePath,
+        status: "processing",
+      })
+      .select("id")
+      .single();
+    if (job) jobId = job.id;
+  } catch {
+    // Non-blocking if table is unavailable
   }
 
   try {
     const menu = await extractMenuFromImage(bytes.toString("base64"), mimeType);
 
     if (menu.categories.length === 0) {
-      await supabase
-        .from("extraction_jobs")
-        .update({
-          status: "failed",
-          error: "لم يتم العثور على أصناف في الصورة",
-          completed_at: new Date().toISOString(),
-        })
-        .eq("id", job.id);
+      if (jobId) {
+        await supabase
+          .from("extraction_jobs")
+          .update({
+            status: "failed",
+            error: "لم يتم العثور على أصناف في الصورة",
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", jobId);
+      }
 
       return NextResponse.json(
-        { error: "لم نتمكن من قراءة أي أصناف. جرّب صورة أوضح." },
+        { error: "لم نتمكن من قراءة أي أصناف من هذه الصورة. تأكد من وضوح الصورة وجرّب مرة أخرى." },
         { status: 422 },
       );
     }
 
-    await supabase
-      .from("extraction_jobs")
-      .update({
-        status: "completed",
-        result: menu,
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", job.id);
+    if (jobId) {
+      await supabase
+        .from("extraction_jobs")
+        .update({
+          status: "completed",
+          result: menu,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", jobId);
+    }
 
-    return NextResponse.json({ jobId: job.id, menu });
+    return NextResponse.json({ jobId: jobId ?? "temp-job", menu });
   } catch (error) {
-    const message =
-      error instanceof GeminiNotConfiguredError
-        ? "ميزة القراءة الذكية غير مفعّلة. أضف GEMINI_API_KEY."
-        : "فشل تحليل الصورة، حاول مرة أخرى";
+    let message = "فشل تحليل الصورة، يرجى المحاولة مرة أخرى";
+    let status = 500;
 
-    await supabase
-      .from("extraction_jobs")
-      .update({
-        status: "failed",
-        error: error instanceof Error ? error.message : "unknown",
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", job.id);
+    if (error instanceof GeminiNotConfiguredError) {
+      message = "ميزة القراءة الذكية غير مفعّلة. يرجى إضافة GEMINI_API_KEY في إعدادات البيئة.";
+      status = 503;
+    } else if (error instanceof Error && (error.name === "GeminiRateLimitError" || error.message.includes("Rate Limit") || error.message.includes("429"))) {
+      message = "تم الوصول إلى الحد المؤقت للطلبات (Rate limit). انتظر دقيقة ثم أعد المحاولة.";
+      status = 429;
+    } else if (error instanceof Error && error.message) {
+      message = `فشل التحليل: ${error.message}`;
+    }
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (jobId) {
+      await supabase
+        .from("extraction_jobs")
+        .update({
+          status: "failed",
+          error: error instanceof Error ? error.message : "unknown",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", jobId);
+    }
+
+    return NextResponse.json({ error: message }, { status });
   }
 }

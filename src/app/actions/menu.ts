@@ -118,6 +118,7 @@ const itemSchema = z.object({
   name: z.string().trim().min(1, "اسم الطبق مطلوب").max(120),
   description: z.string().trim().max(400).optional(),
   price: z.coerce.number().min(0, "السعر غير صحيح").max(1_000_000).nullable(),
+  imageUrl: z.string().trim().url("رابط الصورة غير صحيح").or(z.literal("")).nullable().optional(),
 });
 
 export async function createItem(
@@ -126,12 +127,15 @@ export async function createItem(
 ): Promise<MenuActionState> {
   await requireUser();
   const rawPrice = String(formData.get("price") ?? "").trim();
+  const rawImageUrl = String(formData.get("imageUrl") ?? "").trim();
+
   const parsed = itemSchema.safeParse({
     restaurantId: formData.get("restaurantId"),
     categoryId: normaliseCategoryId(formData.get("categoryId")),
     name: formData.get("name"),
     description: formData.get("description") || undefined,
     price: rawPrice === "" ? null : rawPrice,
+    imageUrl: rawImageUrl || null,
   });
 
   if (!parsed.success) {
@@ -160,6 +164,7 @@ export async function createItem(
     name: parsed.data.name,
     description: parsed.data.description ?? null,
     price: parsed.data.price,
+    image_url: parsed.data.imageUrl || null,
     sort_order: (last?.sort_order ?? 0) + 1,
   });
 
@@ -176,6 +181,7 @@ export async function updateItem(
   await requireUser();
   const id = z.string().uuid().parse(formData.get("id"));
   const rawPrice = String(formData.get("price") ?? "").trim();
+  const rawImageUrl = String(formData.get("imageUrl") ?? "").trim();
 
   const parsed = z
     .object({
@@ -183,12 +189,14 @@ export async function updateItem(
       description: z.string().trim().max(400).nullable(),
       price: z.coerce.number().min(0).max(1_000_000).nullable(),
       categoryId: z.string().uuid().nullable(),
+      image_url: z.string().trim().url("رابط الصورة غير صحيح").or(z.literal("")).nullable().optional(),
     })
     .safeParse({
       name: formData.get("name"),
       description: String(formData.get("description") ?? "").trim() || null,
       price: rawPrice === "" ? null : rawPrice,
       categoryId: normaliseCategoryId(formData.get("categoryId")),
+      image_url: rawImageUrl || null,
     });
 
   if (!parsed.success) {
@@ -198,7 +206,13 @@ export async function updateItem(
   const supabase = await createClient();
   const { error } = await supabase
     .from("menu_items")
-    .update(parsed.data)
+    .update({
+      name: parsed.data.name,
+      description: parsed.data.description,
+      price: parsed.data.price,
+      category_id: parsed.data.categoryId,
+      image_url: parsed.data.image_url || null,
+    })
     .eq("id", id);
 
   if (error) return { error: error.message };
