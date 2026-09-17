@@ -269,7 +269,7 @@ export function PublicMenu({
       )}
 
       {/* Main Content */}
-      <main className="mx-auto max-w-3xl px-4 pb-24 pt-4 sm:px-6">
+      <main className="mx-auto max-w-3xl px-4 pb-8 pt-4 sm:px-6">
         {/* Search & View Switcher */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative flex-1">
@@ -566,15 +566,15 @@ export function PublicMenu({
 
         {/* Footer */}
         <footer
-          className="mt-16 border-t pt-6 text-center text-xs"
+          className="mt-8 border-t pt-4 text-center text-xs space-y-1"
           style={{
-            borderColor: "var(--menu-muted)",
+            borderColor: "color-mix(in srgb, var(--menu-foreground) 10%, transparent)",
             color: "var(--menu-foreground)",
-            opacity: 0.6,
+            opacity: 0.65,
           }}
         >
-          <p>جميع الأسعار تشمل ضريبة القيمة المضافة إن وجدت.</p>
-          <p className="mt-1 font-semibold">{restaurant.name} © {new Date().getFullYear()}</p>
+          <p className="text-[11px]">جميع الأسعار تشمل ضريبة القيمة المضافة إن وجدت.</p>
+          <p className="font-semibold text-xs">{restaurant.name} © {new Date().getFullYear()}</p>
         </footer>
       </main>
 
