@@ -104,7 +104,6 @@ export function TopLoader({
           width: `${progress}%`,
           backgroundColor: color,
           opacity: isVisible || progress > 0 ? 1 : 0,
-          boxShadow: `0 0 10px ${color}, 0 0 5px ${color}`,
         }}
       />
     </div>

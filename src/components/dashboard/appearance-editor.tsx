@@ -1,7 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { CheckIcon, Loader2Icon, SparklesIcon, Trash2Icon } from "lucide-react";
+import { useState, useTransition, useRef } from "react";
+import {
+  CheckIcon,
+  ImageIcon,
+  Loader2Icon,
+  SparklesIcon,
+  Trash2Icon,
+  UploadCloudIcon,
+  XIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { applyTheme, deletePalette } from "@/app/actions/theme";
@@ -12,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { resolveTheme, type ThemePreset } from "@/lib/theme";
 import type { Palette, PaletteColors, Restaurant } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -42,10 +51,15 @@ export function AppearanceEditor({
     restaurant.theme?.paletteId ?? null,
   );
   const [aiPalettes, setAiPalettes] = useState<
-    { name: string; colors: PaletteColors }[]
+    { name: string; colors: PaletteColors; source?: "image" | "text" }[]
   >([]);
   const [isPending, startTransition] = useTransition();
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingText, setIsGeneratingText] = useState(false);
+  const [isExtractingImage, setIsExtractingImage] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function selectPalette(id: string, colors: PaletteColors) {
     setDraft(colors);
@@ -71,7 +85,7 @@ export function AppearanceEditor({
   }
 
   async function generateWithAi() {
-    setIsGenerating(true);
+    setIsGeneratingText(true);
     try {
       const response = await fetch("/api/suggest-palettes", { method: "POST" });
       const payload = await response.json();
@@ -81,12 +95,79 @@ export function AppearanceEditor({
         return;
       }
 
-      setAiPalettes(payload.palettes);
-      toast.success("تم توليد ٣ اقتراحات");
+      const formatted = (payload.palettes || []).map(
+        (p: { name: string; colors: PaletteColors }) => ({
+          ...p,
+          source: "text" as const,
+        }),
+      );
+
+      setAiPalettes(formatted);
+      if (formatted.length > 0) {
+        selectPalette("ai-0", formatted[0].colors);
+      }
+      toast.success("تم توليد ٣ اقتراحات بناءً على بيانات المطعم");
     } catch {
       toast.error("تعذّر الاتصال بالخدمة");
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingText(false);
+    }
+  }
+
+  function handleFileSelected(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("يرجى اختيار ملف صورة صالح");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("حجم الصورة يجب ألا يتجاوز 8 ميجابايت");
+      return;
+    }
+
+    setSelectedImageFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setImagePreview(objectUrl);
+  }
+
+  async function extractThemeFromImage() {
+    if (!selectedImageFile) {
+      toast.error("يرجى اختيار صورة أولاً");
+      return;
+    }
+
+    setIsExtractingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", selectedImageFile);
+
+      const response = await fetch("/api/suggest-palettes/from-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        toast.error(payload.error ?? "فشل استخراج الثيم من الصورة");
+        return;
+      }
+
+      const formatted = (payload.palettes || []).map(
+        (p: { name: string; colors: PaletteColors }) => ({
+          ...p,
+          source: "image" as const,
+        }),
+      );
+
+      setAiPalettes(formatted);
+      if (formatted.length > 0) {
+        selectPalette("ai-0", formatted[0].colors);
+      }
+      toast.success("تم استخراج لوحات الألوان من الصورة بنجاح!");
+    } catch {
+      toast.error("تعذّر الاتصال بالخدمة لتحليل الصورة");
+    } finally {
+      setIsExtractingImage(false);
     }
   }
 
@@ -127,46 +208,182 @@ export function AppearanceEditor({
       <div>
         <h1 className="text-2xl font-bold">المظهر والألوان</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          اختر ثيماً جاهزاً أو اطلب اقتراحات من الذكاء الاصطناعي، وشاهد النتيجة
-          فوراً.
+          اختر ثيماً جاهزاً أو استخرج لوحة ألوان ذكية من صورة شعارك وديكور مطعمك بالذكاء الاصطناعي.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
           {geminiConfigured && (
-            <Card>
-              <CardHeader className="flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base">اقتراحات الذكاء الاصطناعي</CardTitle>
-                <Button
-                  size="sm"
-                  onClick={generateWithAi}
-                  disabled={isGenerating}
-                >
-                  {isGenerating ? (
-                    <Loader2Icon className="size-4 animate-spin" />
-                  ) : (
+            <Card className="border-primary/20 bg-gradient-to-b from-primary/[0.03] to-transparent">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <SparklesIcon className="size-4" />
-                  )}
-                  اقترح ثيمات
-                </Button>
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">توليد واستخراج الثيم بالذكاء الاصطناعي</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      استخرج ألواناً متناسقة من صورة (شعار / بنر / ديكور) أو احصل على اقتراحات تلقائية.
+                    </p>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                {aiPalettes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    اضغط «اقترح ثيمات» لتحصل على ثلاث لوحات ألوان مناسبة لمطعمك.
-                  </p>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {aiPalettes.map((palette, index) => (
-                      <PaletteSwatch
-                        key={index}
-                        name={palette.name}
-                        colors={palette.colors}
-                        isSelected={paletteId === `ai-${index}`}
-                        onSelect={() => selectPalette(`ai-${index}`, palette.colors)}
-                      />
-                    ))}
+              <CardContent className="space-y-4">
+                <Tabs defaultValue="image" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-2">
+                    <TabsTrigger value="image" className="flex items-center gap-2">
+                      <ImageIcon className="size-4" />
+                      استخراج من صورة
+                    </TabsTrigger>
+                    <TabsTrigger value="text" className="flex items-center gap-2">
+                      <SparklesIcon className="size-4" />
+                      اقتراح تلقائي
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="image" className="space-y-3 pt-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelected(file);
+                      }}
+                    />
+
+                    {imagePreview ? (
+                      <div className="relative flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row">
+                        <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={imagePreview}
+                            alt="صورة الثيم"
+                            className="size-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0 text-center sm:text-start">
+                          <p className="truncate font-medium text-sm text-foreground">
+                            {selectedImageFile?.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {selectedImageFile
+                              ? `${(selectedImageFile.size / (1024 * 1024)).toFixed(2)} MB`
+                              : ""}
+                          </p>
+                          <div className="mt-2.5 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                            <Button
+                              size="sm"
+                              onClick={extractThemeFromImage}
+                              disabled={isExtractingImage}
+                            >
+                              {isExtractingImage ? (
+                                <Loader2Icon className="size-4 animate-spin" />
+                              ) : (
+                                <SparklesIcon className="size-4" />
+                              )}
+                              استخراج الثيم من الصورة
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedImageFile(null);
+                                setImagePreview(null);
+                                if (fileInputRef.current) fileInputRef.current.value = "";
+                              }}
+                              disabled={isExtractingImage}
+                            >
+                              <XIcon className="size-3.5" />
+                              إلغاء
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragging(true);
+                        }}
+                        onDragLeave={() => setIsDragging(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDragging(false);
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) handleFileSelected(file);
+                        }}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={cn(
+                          "flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-colors",
+                          isDragging
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50 hover:bg-muted/30",
+                        )}
+                      >
+                        <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <UploadCloudIcon className="size-6" />
+                        </div>
+                        <p className="mt-2 text-sm font-medium text-foreground">
+                          اضغط لاختيار صورة أو اسحبها هنا
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          يدعم صور الشعار، البنر، ديكور المطعم، أو أطباقك (JPG, PNG, WEBP حتى 8MB)
+                        </p>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="text" className="space-y-3 pt-2">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border p-4 bg-card">
+                      <div>
+                        <p className="text-sm font-medium">اقتراح ذكي حسب نشاط المطعم</p>
+                        <p className="text-xs text-muted-foreground">
+                          يتم إنشاء لوحات ألوان ملائمة بناءً على اسم «{restaurant.name}» ووصفه.
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={generateWithAi}
+                        disabled={isGeneratingText}
+                        className="shrink-0 w-full sm:w-auto"
+                      >
+                        {isGeneratingText ? (
+                          <Loader2Icon className="size-4 animate-spin" />
+                        ) : (
+                          <SparklesIcon className="size-4" />
+                        )}
+                        اقترح ثيمات الآن
+                      </Button>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                {/* AI Palettes Results */}
+                {aiPalettes.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-foreground">
+                        الاقتراحات المستخرجة بالذكاء الاصطناعي:
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        اضغط على أي لوحة لمعاينتها وتطبيقها
+                      </span>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {aiPalettes.map((palette, index) => (
+                        <PaletteSwatch
+                          key={index}
+                          name={palette.name}
+                          colors={palette.colors}
+                          isSelected={paletteId === `ai-${index}`}
+                          onSelect={() => selectPalette(`ai-${index}`, palette.colors)}
+                        />
+                      ))}
+                    </div>
                   </div>
                 )}
               </CardContent>

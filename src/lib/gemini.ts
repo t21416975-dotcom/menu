@@ -333,3 +333,69 @@ export async function suggestPalettes(input: {
     .filter((palette) => isPaletteAccessible(palette.colors))
     .slice(0, 3);
 }
+
+/**
+ * Extracts distinct, accessible colour palettes from an uploaded image (logo, banner, interior, dish, etc.).
+ */
+export async function extractPalettesFromImage(
+  base64Data: string,
+  mimeType: string,
+  restaurantName?: string,
+): Promise<{ name: string; colors: PaletteColors }[]> {
+  const ai = getClient();
+
+  const response = await executeWithModelFallback(ai, {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: [
+              "أنت مصمم واجهات وخبير هوية بصرية محترف للمطاعم والمقاهي.",
+              restaurantName ? `اسم المطعم: "${restaurantName}".` : "",
+              "قم بتحليل الصورة المرفقة واستخرج ثلاث لوحات ألوان (Color Palettes) متناسقة وجذابة مستوحاة من ألوان وهوية هذه الصورة لتناسب منيو إلكتروني احترافي.",
+              "اجعل اللوحات متنوعة: مثلاً (لوحة تستوحي الألوان الأساسية للصورة، لوحة داكنة Dark Mode فخمة، ولوحة فاتحة ومشرقة Light Mode).",
+              "شروط أساسية وصارمة:",
+              "1. التزام تام بنسبة تباين واضحة ومريحة للقراءة بين لون النص ولون الخلفية (WCAG AA).",
+              "2. جميع الألوان يجب أن تكون بصيغة Hex المكونة من 7 خانات (#RRGGBB).",
+              "3. سمّ كل ثيم باسم عربي وصفي جذاب يعبر عن روحه المستوحاة من الصورة.",
+            ]
+              .filter(Boolean)
+              .join(" "),
+          },
+          { inlineData: { data: base64Data, mimeType } },
+        ],
+      },
+    ],
+    config: {
+      temperature: 0.7,
+      responseMimeType: "application/json",
+      responseJsonSchema: PALETTE_SCHEMA,
+    },
+  });
+
+  const raw = parseJson<RawPalettes>(response.text);
+
+  return (raw.palettes ?? [])
+    .filter(
+      (palette) =>
+        HEX.test(palette.primary ?? "") &&
+        HEX.test(palette.accent ?? "") &&
+        HEX.test(palette.background ?? "") &&
+        HEX.test(palette.foreground ?? "") &&
+        HEX.test(palette.muted ?? ""),
+    )
+    .map((palette) => ({
+      name: palette.name?.trim() || "ثيم مستخرج من الصورة",
+      colors: {
+        primary: palette.primary,
+        accent: palette.accent,
+        background: palette.background,
+        foreground: palette.foreground,
+        muted: palette.muted,
+        mode: palette.mode === "dark" ? ("dark" as const) : ("light" as const),
+      },
+    }))
+    .filter((palette) => isPaletteAccessible(palette.colors))
+    .slice(0, 3);
+}
