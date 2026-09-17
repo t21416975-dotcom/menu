@@ -140,19 +140,19 @@ export function PublicMenu({
       {/* Top Banner & Header */}
       <header className="relative w-full">
         {restaurant.cover_url ? (
-          <div className="relative w-full h-44 sm:h-56 md:h-64 overflow-hidden">
+          <div className="relative w-full h-48 sm:h-60 md:h-72 overflow-hidden bg-muted/30">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={restaurant.cover_url}
               alt={restaurant.name}
-              className="size-full object-cover object-center"
+              className="size-full object-cover object-center block"
             />
-            {/* Subtle shade for share button visibility */}
-            <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/40 to-transparent" />
+            {/* Subtle shade for share button visibility & depth */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/30" />
           </div>
         ) : (
           <div
-            className="h-28 w-full shadow-inner sm:h-36"
+            className="h-32 w-full shadow-inner sm:h-44"
             style={{
               background: `linear-gradient(135deg, var(--menu-primary), var(--menu-accent))`,
             }}
@@ -164,7 +164,7 @@ export function PublicMenu({
           <Button
             size="icon"
             variant="secondary"
-            className="size-9 rounded-full bg-white/90 shadow-md backdrop-blur-md hover:bg-white text-gray-800"
+            className="size-9 rounded-full bg-white/95 shadow-md backdrop-blur-md hover:bg-white text-gray-800 transition-transform active:scale-95"
             onClick={handleShare}
             title="مشاركة المنيو"
           >
@@ -173,35 +173,34 @@ export function PublicMenu({
         </div>
 
         {/* Restaurant Profile Info */}
-        <div className="relative mx-auto -mt-12 max-w-3xl px-4 sm:-mt-14 sm:px-6">
+        <div className="relative mx-auto -mt-14 max-w-3xl px-4 sm:-mt-16 sm:px-6">
           <div className="flex flex-col items-center text-center">
             {/* Logo */}
             {restaurant.logo_url ? (
-              <div
-                className="size-20 overflow-hidden rounded-2xl border-4 bg-white p-1 shadow-xl ring-1 ring-black/10 sm:size-24"
-                style={{ borderColor: "var(--menu-background)" }}
-              >
+              <div className="size-24 overflow-hidden rounded-2xl bg-white p-1 shadow-xl ring-4 ring-white sm:size-28">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={restaurant.logo_url}
                   alt={restaurant.name}
-                  className="size-full rounded-xl object-contain"
+                  className="size-full rounded-xl object-contain bg-white"
                 />
               </div>
             ) : (
-              <div
-                className="flex size-16 items-center justify-center rounded-2xl border-4 bg-primary/10 shadow-lg sm:size-20"
-                style={{ borderColor: "var(--menu-background)" }}
-              >
-                <UtensilsIcon
-                  className="size-7 sm:size-9"
-                  style={{ color: "var(--menu-primary)" }}
-                />
+              <div className="flex size-20 items-center justify-center rounded-2xl bg-white p-1.5 shadow-xl ring-4 ring-white sm:size-24">
+                <div
+                  className="flex size-full items-center justify-center rounded-xl"
+                  style={{ backgroundColor: "var(--menu-muted)" }}
+                >
+                  <UtensilsIcon
+                    className="size-8 sm:size-10"
+                    style={{ color: "var(--menu-primary)" }}
+                  />
+                </div>
               </div>
             )}
 
             <h1
-              className="mt-2.5 text-2xl font-black tracking-tight sm:text-3xl"
+              className="mt-3 text-2xl font-black tracking-tight sm:text-3xl"
               style={{ color: "var(--menu-foreground)" }}
             >
               {restaurant.name}
@@ -220,26 +219,28 @@ export function PublicMenu({
             <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2">
               {restaurant.address && (
                 <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border"
                   style={{
                     backgroundColor: "var(--menu-muted)",
+                    borderColor: "color-mix(in srgb, var(--menu-foreground) 8%, transparent)",
                     color: "var(--menu-foreground)",
                   }}
                 >
-                  <MapPinIcon className="size-3.5 opacity-70" />
+                  <MapPinIcon className="size-3.5 opacity-60" />
                   {restaurant.address}
                 </span>
               )}
               {restaurant.phone && (
                 <a
                   href={`tel:${restaurant.phone}`}
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-transform hover:scale-105 active:scale-95"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-transform hover:scale-105 active:scale-95"
                   style={{
                     backgroundColor: "var(--menu-muted)",
+                    borderColor: "color-mix(in srgb, var(--menu-foreground) 8%, transparent)",
                     color: "var(--menu-foreground)",
                   }}
                 >
-                  <PhoneIcon className="size-3.5" />
+                  <PhoneIcon className="size-3.5 opacity-70" />
                   اتصال
                 </a>
               )}
@@ -248,11 +249,7 @@ export function PublicMenu({
                   href={`https://wa.me/${rawWhatsapp}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-semibold shadow-sm transition-transform hover:scale-105 active:scale-95"
-                  style={{
-                    backgroundColor: "var(--menu-accent)",
-                    color: "var(--menu-on-accent)",
-                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-bold text-white shadow-sm transition-transform hover:scale-105 active:scale-95 bg-[#25D366] hover:bg-[#20bd5a]"
                 >
                   <MessageCircleIcon className="size-3.5" />
                   مراسلة واتساب

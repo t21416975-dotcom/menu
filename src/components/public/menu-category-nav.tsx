@@ -48,7 +48,7 @@ export function MenuCategoryNav({
       className="sticky top-0 z-20 border-b backdrop-blur-md"
       style={{
         backgroundColor: "color-mix(in srgb, var(--menu-background) 88%, transparent)",
-        borderColor: "var(--menu-muted)",
+        borderColor: "color-mix(in srgb, var(--menu-foreground) 8%, transparent)",
       }}
     >
       <nav className="mx-auto flex max-w-3xl gap-2 overflow-x-auto px-4 py-3 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
