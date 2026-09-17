@@ -110,6 +110,8 @@ const updateRestaurantSchema = z.object({
   whatsapp: z.string().trim().max(30).optional(),
   address: z.string().trim().max(200).optional(),
   description: z.string().trim().max(500).optional(),
+  logoUrl: z.string().trim().url("رابط الشعار غير صالح").or(z.literal("")).nullable().optional(),
+  coverUrl: z.string().trim().url("رابط البنر غير صالح").or(z.literal("")).nullable().optional(),
 });
 
 export async function updateRestaurantSettings(
@@ -117,6 +119,9 @@ export async function updateRestaurantSettings(
   formData: FormData,
 ): Promise<ActionState> {
   const user = await requireUser();
+  const rawLogo = String(formData.get("logoUrl") ?? "").trim();
+  const rawCover = String(formData.get("coverUrl") ?? "").trim();
+
   const parsed = updateRestaurantSchema.safeParse({
     name: formData.get("name"),
     currency: formData.get("currency") || "SAR",
@@ -124,6 +129,8 @@ export async function updateRestaurantSettings(
     whatsapp: formData.get("whatsapp") || undefined,
     address: formData.get("address") || undefined,
     description: formData.get("description") || undefined,
+    logoUrl: rawLogo || null,
+    coverUrl: rawCover || null,
   });
 
   if (!parsed.success) {
@@ -140,13 +147,16 @@ export async function updateRestaurantSettings(
       whatsapp: parsed.data.whatsapp ?? null,
       address: parsed.data.address ?? null,
       description: parsed.data.description ?? null,
+      logo_url: parsed.data.logoUrl || null,
+      cover_url: parsed.data.coverUrl || null,
     })
     .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
 
   revalidatePath("/dashboard", "layout");
-  return { success: "تم حفظ البيانات" };
+  revalidatePath("/", "layout");
+  return { success: "تم حفظ البيانات بنجاح" };
 }
 
 const slugSchema = z
