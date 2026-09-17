@@ -40,7 +40,7 @@ export function PublicMenu({
   items: MenuItem[];
 }) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
 
   const grouped: CategoryWithItems[] = useMemo(() => {
@@ -110,12 +110,23 @@ export function PublicMenu({
   function getWhatsAppOrderLink(item: MenuItem) {
     if (!rawWhatsapp) return null;
     const text = encodeURIComponent(
-      `مرحباً، أود طلب طبق: *${item.name}*${
-        item.price !== null ? ` (السعر: ${formatPrice(item.price, restaurant.currency)})` : ""
+      `مرحباً، أود طلب: *${item.name}*${
+        item.price !== null
+          ? ` (السعر: ${formatPrice(item.price, restaurant.currency)})`
+          : ""
       } من منيو ${restaurant.name}.`,
     );
     return `https://wa.me/${rawWhatsapp}?text=${text}`;
   }
+
+  const navCategories = useMemo(
+    () =>
+      grouped.map((category) => ({
+        id: category.id,
+        name: category.name,
+      })),
+    [grouped],
+  );
 
   return (
     <div
@@ -126,26 +137,22 @@ export function PublicMenu({
         color: "var(--menu-foreground)",
       }}
     >
-      {/* Top Header & Cover Photo */}
-      <header className="relative">
+      {/* Top Banner & Header */}
+      <header className="relative w-full">
         {restaurant.cover_url ? (
-          <div className="relative h-48 w-full overflow-hidden sm:h-64 md:h-72">
+          <div className="relative w-full overflow-hidden bg-black/5 aspect-[16/7] sm:aspect-[21/8] max-h-72">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={restaurant.cover_url}
               alt={restaurant.name}
-              className="size-full object-cover"
+              className="size-full object-cover object-center"
             />
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(to top, var(--menu-background) 5%, rgba(0,0,0,0.4) 100%)`,
-              }}
-            />
+            {/* Subtle top shade for button visibility only */}
+            <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/40 to-transparent" />
           </div>
         ) : (
           <div
-            className="h-28 w-full shadow-inner"
+            className="h-28 w-full shadow-inner sm:h-36"
             style={{
               background: `linear-gradient(135deg, var(--menu-primary), var(--menu-accent))`,
             }}
@@ -157,7 +164,7 @@ export function PublicMenu({
           <Button
             size="icon"
             variant="secondary"
-            className="size-9 rounded-full bg-background/80 shadow-md backdrop-blur-md hover:bg-background"
+            className="size-9 rounded-full bg-white/90 shadow-md backdrop-blur-md hover:bg-white text-gray-800"
             onClick={handleShare}
             title="مشاركة المنيو"
           >
@@ -165,32 +172,36 @@ export function PublicMenu({
           </Button>
         </div>
 
-        {/* Restaurant Profile Card */}
-        <div className="mx-auto -mt-14 max-w-3xl px-4 sm:px-6">
+        {/* Restaurant Profile Info */}
+        <div className="mx-auto -mt-10 max-w-3xl px-4 sm:-mt-12 sm:px-6">
           <div className="flex flex-col items-center text-center">
+            {/* Logo */}
             {restaurant.logo_url ? (
               <div
-                className="size-24 overflow-hidden rounded-2xl border-4 bg-white shadow-xl ring-1 ring-black/5 sm:size-28"
+                className="size-20 overflow-hidden rounded-2xl border-4 bg-white p-1 shadow-lg ring-1 ring-black/5 sm:size-24"
                 style={{ borderColor: "var(--menu-background)" }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={restaurant.logo_url}
                   alt={restaurant.name}
-                  className="size-full object-cover"
+                  className="size-full rounded-xl object-contain"
                 />
               </div>
             ) : (
               <div
-                className="flex size-20 items-center justify-center rounded-2xl border-4 bg-primary/10 shadow-lg"
+                className="flex size-16 items-center justify-center rounded-2xl border-4 bg-primary/10 shadow-md sm:size-20"
                 style={{ borderColor: "var(--menu-background)" }}
               >
-                <UtensilsIcon className="size-8" style={{ color: "var(--menu-primary)" }} />
+                <UtensilsIcon
+                  className="size-7 sm:size-9"
+                  style={{ color: "var(--menu-primary)" }}
+                />
               </div>
             )}
 
             <h1
-              className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl"
+              className="mt-2.5 text-2xl font-black tracking-tight sm:text-3xl"
               style={{ color: "var(--menu-foreground)" }}
             >
               {restaurant.name}
@@ -198,15 +209,15 @@ export function PublicMenu({
 
             {restaurant.description && (
               <p
-                className="mt-2 max-w-lg text-sm leading-relaxed"
+                className="mt-1.5 max-w-md text-sm leading-relaxed"
                 style={{ color: "var(--menu-foreground)", opacity: 0.8 }}
               >
                 {restaurant.description}
               </p>
             )}
 
-            {/* Contact & Location Actions */}
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            {/* Badges & Actions */}
+            <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2">
               {restaurant.address && (
                 <span
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
@@ -253,30 +264,25 @@ export function PublicMenu({
       </header>
 
       {/* Sticky Category Bar */}
-      {grouped.length > 0 && (
-        <MenuCategoryNav
-          categories={grouped.map((category) => ({
-            id: category.id,
-            name: category.name,
-          }))}
-        />
+      {navCategories.length > 0 && (
+        <MenuCategoryNav categories={navCategories} />
       )}
 
-      {/* Main Content Area */}
-      <main className="mx-auto max-w-3xl px-4 pb-28 pt-4 sm:px-6">
-        {/* Search & View Controls */}
+      {/* Main Content */}
+      <main className="mx-auto max-w-3xl px-4 pb-24 pt-4 sm:px-6">
+        {/* Search & View Switcher */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative flex-1">
-            <SearchIcon className="absolute right-3 top-1/2 size-4 -translate-y-1/2 opacity-50" />
+            <SearchIcon className="absolute right-3.5 top-1/2 size-4 -translate-y-1/2 opacity-50" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ابحث عن طبق أو مكونات..."
-              className="w-full rounded-xl border py-2.5 pl-9 pr-9 text-sm transition-all focus:outline-none focus:ring-2"
+              placeholder="ابحث عن طبق أو وجبة..."
+              className="w-full rounded-2xl border py-2.5 pl-9 pr-10 text-sm transition-all focus:outline-none focus:ring-2"
               style={{
                 backgroundColor: "var(--menu-muted)",
-                borderColor: "var(--menu-muted)",
+                borderColor: "color-mix(in srgb, var(--menu-foreground) 10%, transparent)",
                 color: "var(--menu-foreground)",
               }}
             />
@@ -284,7 +290,7 @@ export function PublicMenu({
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full p-1 opacity-60 hover:opacity-100"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 rounded-full p-1 opacity-60 hover:opacity-100"
               >
                 <XIcon className="size-3.5" />
               </button>
@@ -292,62 +298,55 @@ export function PublicMenu({
           </div>
 
           <div className="flex items-center justify-between gap-2 sm:justify-end">
-            <span className="text-xs opacity-60">
+            <span className="text-xs opacity-60 tabular-nums">
               {totalItemsCount} {totalItemsCount === 1 ? "طبق" : "أطباق"}
             </span>
 
             <div
-              className="flex items-center rounded-lg p-0.5"
-              style={{ backgroundColor: "var(--menu-muted)" }}
+              className="flex items-center rounded-xl p-1 border"
+              style={{
+                backgroundColor: "var(--menu-muted)",
+                borderColor: "color-mix(in srgb, var(--menu-foreground) 8%, transparent)",
+              }}
             >
               <button
                 type="button"
-                onClick={() => setViewMode("grid")}
-                title="عرض بطاقات مصورة"
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
-                  viewMode === "grid" ? "shadow-sm" : "opacity-60 hover:opacity-100"
-                }`}
-                style={
-                  viewMode === "grid"
-                    ? {
-                        backgroundColor: "var(--menu-background)",
-                        color: "var(--menu-foreground)",
-                      }
-                    : {}
-                }
-              >
-                <LayoutGridIcon className="size-3.5" />
-                شبكة
-              </button>
-              <button
-                type="button"
                 onClick={() => setViewMode("list")}
-                title="عرض قائمة"
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
-                  viewMode === "list" ? "shadow-sm" : "opacity-60 hover:opacity-100"
-                }`}
-                style={
+                title="عرض قائمة أنيق"
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
                   viewMode === "list"
-                    ? {
-                        backgroundColor: "var(--menu-background)",
-                        color: "var(--menu-foreground)",
-                      }
-                    : {}
-                }
+                    ? "shadow-sm bg-background text-foreground"
+                    : "opacity-60 hover:opacity-100"
+                }`}
               >
                 <ListIcon className="size-3.5" />
                 قائمة
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                title="عرض شبكة بطاقات"
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
+                  viewMode === "grid"
+                    ? "shadow-sm bg-background text-foreground"
+                    : "opacity-60 hover:opacity-100"
+                }`}
+              >
+                <LayoutGridIcon className="size-3.5" />
+                شبكة
               </button>
             </div>
           </div>
         </div>
 
-        {/* Categories and Items */}
+        {/* Categories & Dish Items */}
         {grouped.length === 0 ? (
           <div className="py-20 text-center">
             <UtensilsIcon className="mx-auto size-12 opacity-30" />
             <p className="mt-3 text-base font-medium opacity-80">
-              {searchQuery ? "لم نجد أي طبق يطابق بحثك" : "المنيو قيد الإعداد، عد قريباً"}
+              {searchQuery
+                ? "لم نجد أي طبق يطابق بحثك"
+                : "المنيو قيد الإعداد، عد قريباً"}
             </p>
             {searchQuery && (
               <Button
@@ -361,22 +360,27 @@ export function PublicMenu({
             )}
           </div>
         ) : (
-          <div className="space-y-12">
+          <div className="space-y-10">
             {grouped.map((category) => (
-              <section key={category.id} id={`category-${category.id}`} className="scroll-mt-20">
+              <section
+                key={category.id}
+                id={`category-${category.id}`}
+                className="scroll-mt-24"
+              >
+                {/* Category Header */}
                 <div className="mb-4 flex items-center gap-3">
                   <h2
-                    className="text-xl font-bold tracking-tight"
+                    className="text-lg font-bold tracking-tight sm:text-xl"
                     style={{ color: "var(--menu-foreground)" }}
                   >
                     {category.name}
                   </h2>
                   <span
-                    className="h-px flex-1 opacity-30"
+                    className="h-px flex-1 opacity-20"
                     style={{ backgroundColor: "var(--menu-foreground)" }}
                   />
                   <span
-                    className="rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums"
+                    className="rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums"
                     style={{
                       backgroundColor: "var(--menu-muted)",
                       color: "var(--menu-primary)",
@@ -388,105 +392,165 @@ export function PublicMenu({
 
                 {category.description && (
                   <p
-                    className="mb-4 text-sm leading-relaxed"
-                    style={{ color: "var(--menu-foreground)", opacity: 0.7 }}
+                    className="mb-3.5 text-xs leading-relaxed opacity-70"
+                    style={{ color: "var(--menu-foreground)" }}
                   >
                     {category.description}
                   </p>
                 )}
 
-                {/* Grid View */}
-                {viewMode === "grid" ? (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Items Container */}
+                {viewMode === "list" ? (
+                  /* Modern App-Style List (Balanced Horizontal Cards) */
+                  <div className="space-y-3">
                     {category.items.map((item) => (
                       <div
                         key={item.id}
                         onClick={() => setSelectedItem(item)}
                         role="button"
                         tabIndex={0}
-                        className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]"
+                        className="group flex cursor-pointer items-stretch justify-between gap-3.5 rounded-2xl border p-3 transition-all duration-200 hover:shadow-md hover:border-primary/30 active:scale-[0.99]"
                         style={{
                           backgroundColor: "var(--menu-muted)",
-                          borderColor: "color-mix(in srgb, var(--menu-foreground) 8%, transparent)",
-                          borderRadius: "var(--menu-radius, 1rem)",
+                          borderColor:
+                            "color-mix(in srgb, var(--menu-foreground) 8%, transparent)",
                         }}
                       >
-                        {/* Dish Image */}
-                        {item.image_url ? (
-                          <div className="relative h-44 w-full overflow-hidden bg-black/5">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={item.image_url}
-                              alt={item.name}
-                              className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-                              onError={(e) => {
-                                (e.currentTarget.parentElement as HTMLElement).style.display = "none";
-                              }}
-                            />
-                            {item.price !== null && (
-                              <div
-                                className="absolute bottom-2.5 right-2.5 rounded-full px-3 py-1 text-xs font-bold shadow-md backdrop-blur-md"
-                                style={{
-                                  backgroundColor: "var(--menu-primary)",
-                                  color: "var(--menu-on-primary)",
-                                }}
-                              >
-                                {formatPrice(item.price, restaurant.currency)}
-                              </div>
-                            )}
-                          </div>
-                        ) : null}
-
-                        <div className="flex flex-1 flex-col justify-between p-4">
+                        {/* Dish Details */}
+                        <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
                           <div>
-                            <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2">
                               <h3
-                                className="font-bold leading-snug group-hover:underline"
+                                className="font-bold text-sm leading-snug group-hover:text-primary transition-colors sm:text-base"
                                 style={{ color: "var(--menu-foreground)" }}
                               >
                                 {item.name}
                               </h3>
-                              {!item.image_url && item.price !== null && (
-                                <span
-                                  className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold"
-                                  style={{
-                                    backgroundColor: "var(--menu-primary)",
-                                    color: "var(--menu-on-primary)",
-                                  }}
-                                >
-                                  {formatPrice(item.price, restaurant.currency)}
+                              {!item.is_available && (
+                                <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                                  غير متوفر
                                 </span>
                               )}
                             </div>
 
                             {item.description && (
                               <p
-                                className="mt-1.5 line-clamp-2 text-xs leading-relaxed"
-                                style={{
-                                  color: "var(--menu-foreground)",
-                                  opacity: 0.7,
-                                }}
+                                className="mt-1 line-clamp-2 text-xs leading-relaxed opacity-70"
+                                style={{ color: "var(--menu-foreground)" }}
                               >
                                 {item.description}
                               </p>
                             )}
                           </div>
 
-                          <div className="mt-3 flex items-center justify-between pt-2">
-                            {!item.is_available ? (
+                          <div className="mt-2.5 flex items-center justify-between gap-2">
+                            {item.price !== null ? (
                               <span
-                                className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                className="rounded-lg px-2.5 py-1 text-xs font-extrabold tabular-nums"
                                 style={{
                                   backgroundColor: "var(--menu-background)",
-                                  color: "var(--menu-foreground)",
-                                  opacity: 0.6,
+                                  color: "var(--menu-primary)",
                                 }}
                               >
-                                غير متوفر حالياً
+                                {formatPrice(item.price, restaurant.currency)}
                               </span>
                             ) : (
-                              <span className="text-[11px] font-medium opacity-60 group-hover:opacity-100">
-                                اضغط للتفاصيل والطلب ↗
+                              <span />
+                            )}
+
+                            {rawWhatsapp && item.is_available && (
+                              <span className="text-[11px] font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100 hidden sm:inline">
+                                اطلب الآن ↗
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Dish Image Thumbnail */}
+                        {item.image_url && (
+                          <div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-black/5 sm:size-28">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={item.image_url}
+                              alt={item.name}
+                              className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              onError={(e) => {
+                                (e.currentTarget.parentElement as HTMLElement).style.display =
+                                  "none";
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* Balanced Grid Cards */
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    {category.items.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => setSelectedItem(item)}
+                        role="button"
+                        tabIndex={0}
+                        className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]"
+                        style={{
+                          backgroundColor: "var(--menu-muted)",
+                          borderColor:
+                            "color-mix(in srgb, var(--menu-foreground) 8%, transparent)",
+                        }}
+                      >
+                        {item.image_url ? (
+                          <div className="relative aspect-[4/3] w-full overflow-hidden bg-black/5">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={item.image_url}
+                              alt={item.name}
+                              className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              onError={(e) => {
+                                (e.currentTarget.parentElement as HTMLElement).style.display =
+                                  "none";
+                              }}
+                            />
+                          </div>
+                        ) : null}
+
+                        <div className="flex flex-1 flex-col justify-between p-3">
+                          <div>
+                            <div className="flex items-start justify-between gap-1.5">
+                              <h3
+                                className="font-bold text-xs sm:text-sm leading-snug line-clamp-1"
+                                style={{ color: "var(--menu-foreground)" }}
+                              >
+                                {item.name}
+                              </h3>
+                            </div>
+
+                            {item.description && (
+                              <p
+                                className="mt-1 line-clamp-2 text-[11px] leading-relaxed opacity-70"
+                                style={{ color: "var(--menu-foreground)" }}
+                              >
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="mt-2.5 flex items-center justify-between gap-1 pt-1 border-t border-black/5">
+                            {item.price !== null ? (
+                              <span
+                                className="text-xs font-extrabold tabular-nums"
+                                style={{ color: "var(--menu-primary)" }}
+                              >
+                                {formatPrice(item.price, restaurant.currency)}
+                              </span>
+                            ) : (
+                              <span />
+                            )}
+
+                            {!item.is_available && (
+                              <span className="text-[10px] text-destructive font-semibold">
+                                غير متوفر
                               </span>
                             )}
                           </div>
@@ -494,73 +558,6 @@ export function PublicMenu({
                       </div>
                     ))}
                   </div>
-                ) : (
-                  /* Compact List View */
-                  <ul className="divide-y divide-border/40 overflow-hidden rounded-2xl border"
-                    style={{
-                      backgroundColor: "var(--menu-muted)",
-                      borderColor: "color-mix(in srgb, var(--menu-foreground) 8%, transparent)",
-                    }}
-                  >
-                    {category.items.map((item) => (
-                      <li
-                        key={item.id}
-                        onClick={() => setSelectedItem(item)}
-                        role="button"
-                        tabIndex={0}
-                        className="flex cursor-pointer items-center justify-between gap-4 p-3.5 transition-colors hover:bg-black/5"
-                      >
-                        <div className="flex min-w-0 flex-1 items-center gap-3.5">
-                          {item.image_url && (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              src={item.image_url}
-                              alt={item.name}
-                              className="size-14 shrink-0 rounded-xl object-cover shadow-sm"
-                              onError={(e) => {
-                                (e.currentTarget as HTMLElement).style.display = "none";
-                              }}
-                            />
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="font-semibold text-sm"
-                                style={{ color: "var(--menu-foreground)" }}
-                              >
-                                {item.name}
-                              </span>
-                              {!item.is_available && (
-                                <span className="rounded-full px-1.5 py-0.5 text-[9px] font-medium opacity-60">
-                                  غير متوفر
-                                </span>
-                              )}
-                            </div>
-                            {item.description && (
-                              <p
-                                className="mt-0.5 line-clamp-1 text-xs"
-                                style={{
-                                  color: "var(--menu-foreground)",
-                                  opacity: 0.65,
-                                }}
-                              >
-                                {item.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {item.price !== null && (
-                          <span
-                            className="shrink-0 font-bold text-sm tabular-nums"
-                            style={{ color: "var(--menu-primary)" }}
-                          >
-                            {formatPrice(item.price, restaurant.currency)}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
                 )}
               </section>
             ))}
@@ -569,7 +566,7 @@ export function PublicMenu({
 
         {/* Footer */}
         <footer
-          className="mt-16 border-t pt-8 text-center text-xs"
+          className="mt-16 border-t pt-6 text-center text-xs"
           style={{
             borderColor: "var(--menu-muted)",
             color: "var(--menu-foreground)",
@@ -577,16 +574,19 @@ export function PublicMenu({
           }}
         >
           <p>جميع الأسعار تشمل ضريبة القيمة المضافة إن وجدت.</p>
-          <p className="mt-1 font-medium">{restaurant.name} © {new Date().getFullYear()}</p>
+          <p className="mt-1 font-semibold">{restaurant.name} © {new Date().getFullYear()}</p>
         </footer>
       </main>
 
-      {/* Item Detail & WhatsApp Order Modal */}
+      {/* Dish Detail Dialog */}
       {selectedItem && (
-        <Dialog open={Boolean(selectedItem)} onOpenChange={(open) => !open && setSelectedItem(null)}>
-          <DialogContent className="max-w-md overflow-hidden p-0 rounded-2xl">
+        <Dialog
+          open={Boolean(selectedItem)}
+          onOpenChange={(open) => !open && setSelectedItem(null)}
+        >
+          <DialogContent className="max-w-md overflow-hidden p-0 rounded-3xl border">
             {selectedItem.image_url && (
-              <div className="relative h-60 w-full overflow-hidden bg-black/10">
+              <div className="relative aspect-[16/10] max-h-64 w-full overflow-hidden bg-black/10">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={selectedItem.image_url}
@@ -602,7 +602,7 @@ export function PublicMenu({
                   {selectedItem.name}
                 </DialogTitle>
                 {selectedItem.price !== null && (
-                  <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-extrabold text-primary tabular-nums">
+                  <span className="rounded-xl bg-primary/10 px-3 py-1 text-sm font-black text-primary tabular-nums">
                     {formatPrice(selectedItem.price, restaurant.currency)}
                   </span>
                 )}
@@ -615,14 +615,17 @@ export function PublicMenu({
               )}
 
               {!selectedItem.is_available && (
-                <div className="rounded-lg bg-destructive/10 p-3 text-center text-xs font-semibold text-destructive">
+                <div className="rounded-xl bg-destructive/10 p-2.5 text-center text-xs font-semibold text-destructive">
                   هذا الطبق غير متوفر في الوقت الحالي
                 </div>
               )}
 
               <div className="flex gap-2 pt-2">
                 {rawWhatsapp && selectedItem.is_available && (
-                  <Button asChild className="flex-1 gap-2 bg-[#25D366] text-white hover:bg-[#20bd5a]">
+                  <Button
+                    asChild
+                    className="flex-1 gap-2 bg-[#25D366] text-white hover:bg-[#20bd5a] font-bold rounded-xl"
+                  >
                     <a
                       href={getWhatsAppOrderLink(selectedItem) ?? "#"}
                       target="_blank"
@@ -636,7 +639,7 @@ export function PublicMenu({
                 <Button
                   variant="outline"
                   onClick={() => setSelectedItem(null)}
-                  className="px-4"
+                  className="px-4 rounded-xl"
                 >
                   إغلاق
                 </Button>

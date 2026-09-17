@@ -25,7 +25,8 @@ export function MenuCategoryNav({
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
 
         if (visible[0]) {
-          setActiveId(visible[0].target.id.replace("category-", ""));
+          const nextId = visible[0].target.id.replace("category-", "");
+          setActiveId((prev) => (prev !== nextId ? nextId : prev));
         }
       },
       { rootMargin: "-140px 0px -70% 0px", threshold: 0 },

@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TopLoader } from "@/components/ui/top-loader";
 import "./globals.css";
 
 const plexArabic = IBM_Plex_Sans_Arabic({
@@ -30,6 +32,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ar" dir="rtl" className={plexArabic.variable} suppressHydrationWarning>
       <body className="min-h-dvh antialiased">
+        <Suspense fallback={null}>
+          <TopLoader />
+        </Suspense>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
