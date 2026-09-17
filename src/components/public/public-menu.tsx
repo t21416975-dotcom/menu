@@ -40,7 +40,7 @@ export function PublicMenu({
   items: MenuItem[];
 }) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
 
   const grouped: CategoryWithItems[] = useMemo(() => {
@@ -140,14 +140,14 @@ export function PublicMenu({
       {/* Top Banner & Header */}
       <header className="relative w-full">
         {restaurant.cover_url ? (
-          <div className="relative w-full overflow-hidden bg-black/5 aspect-[16/7] sm:aspect-[21/8] max-h-72">
+          <div className="relative w-full h-44 sm:h-56 md:h-64 overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={restaurant.cover_url}
               alt={restaurant.name}
               className="size-full object-cover object-center"
             />
-            {/* Subtle top shade for button visibility only */}
+            {/* Subtle shade for share button visibility */}
             <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/40 to-transparent" />
           </div>
         ) : (
@@ -173,12 +173,12 @@ export function PublicMenu({
         </div>
 
         {/* Restaurant Profile Info */}
-        <div className="mx-auto -mt-10 max-w-3xl px-4 sm:-mt-12 sm:px-6">
+        <div className="relative mx-auto -mt-12 max-w-3xl px-4 sm:-mt-14 sm:px-6">
           <div className="flex flex-col items-center text-center">
             {/* Logo */}
             {restaurant.logo_url ? (
               <div
-                className="size-20 overflow-hidden rounded-2xl border-4 bg-white p-1 shadow-lg ring-1 ring-black/5 sm:size-24"
+                className="size-20 overflow-hidden rounded-2xl border-4 bg-white p-1 shadow-xl ring-1 ring-black/10 sm:size-24"
                 style={{ borderColor: "var(--menu-background)" }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -190,7 +190,7 @@ export function PublicMenu({
               </div>
             ) : (
               <div
-                className="flex size-16 items-center justify-center rounded-2xl border-4 bg-primary/10 shadow-md sm:size-20"
+                className="flex size-16 items-center justify-center rounded-2xl border-4 bg-primary/10 shadow-lg sm:size-20"
                 style={{ borderColor: "var(--menu-background)" }}
               >
                 <UtensilsIcon
@@ -311,19 +311,6 @@ export function PublicMenu({
             >
               <button
                 type="button"
-                onClick={() => setViewMode("list")}
-                title="عرض قائمة أنيق"
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
-                  viewMode === "list"
-                    ? "shadow-sm bg-background text-foreground"
-                    : "opacity-60 hover:opacity-100"
-                }`}
-              >
-                <ListIcon className="size-3.5" />
-                قائمة
-              </button>
-              <button
-                type="button"
                 onClick={() => setViewMode("grid")}
                 title="عرض شبكة بطاقات"
                 className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
@@ -334,6 +321,19 @@ export function PublicMenu({
               >
                 <LayoutGridIcon className="size-3.5" />
                 شبكة
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                title="عرض قائمة أنيق"
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
+                  viewMode === "list"
+                    ? "shadow-sm bg-background text-foreground"
+                    : "opacity-60 hover:opacity-100"
+                }`}
+              >
+                <ListIcon className="size-3.5" />
+                قائمة
               </button>
             </div>
           </div>
