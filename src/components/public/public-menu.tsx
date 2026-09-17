@@ -584,86 +584,34 @@ export function PublicMenu({
           open={Boolean(selectedItem)}
           onOpenChange={(open) => !open && setSelectedItem(null)}
         >
-          <DialogContent
-            showCloseButton={!selectedItem.image_url}
-            className="max-w-md overflow-hidden p-0 rounded-3xl border-2 shadow-2xl ring-1 ring-black/10"
-            style={{
-              backgroundColor: "var(--menu-background)",
-              color: "var(--menu-foreground)",
-              borderColor: "var(--menu-muted)",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--menu-muted)",
-            }}
-          >
+          <DialogContent className="max-w-md overflow-hidden p-0 rounded-3xl border border-black/10 dark:border-white/10 shadow-lg">
             {selectedItem.image_url && (
-              <div
-                className="relative aspect-[16/10] max-h-72 w-full overflow-hidden bg-black/10 border-b"
-                style={{ borderColor: "var(--menu-muted)" }}
-              >
+              <div className="relative aspect-[16/10] max-h-64 w-full overflow-hidden bg-black/10">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={selectedItem.image_url}
                   alt={selectedItem.name}
                   className="size-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
-                <button
-                  type="button"
-                  onClick={() => setSelectedItem(null)}
-                  className="absolute top-3 end-3 flex size-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md transition-transform hover:scale-105 active:scale-95 shadow-md"
-                  aria-label="إغلاق"
-                >
-                  <XIcon className="size-4" />
-                </button>
               </div>
             )}
 
-            <div className="p-5 sm:p-6 space-y-4">
+            <div className="p-5 space-y-4">
               <div className="flex items-start justify-between gap-3">
-                <DialogTitle
-                  className="text-xl sm:text-2xl font-black tracking-tight"
-                  style={{ color: "var(--menu-foreground)" }}
-                >
+                <DialogTitle className="text-xl font-bold">
                   {selectedItem.name}
                 </DialogTitle>
                 {selectedItem.price !== null && (
-                  <span
-                    className="shrink-0 rounded-xl px-3 py-1.5 text-sm sm:text-base font-black tabular-nums shadow-xs"
-                    style={{
-                      backgroundColor: "var(--menu-primary)",
-                      color: "var(--menu-on-primary)",
-                    }}
-                  >
+                  <span className="rounded-xl bg-primary/10 px-3 py-1 text-sm font-black text-primary tabular-nums">
                     {formatPrice(selectedItem.price, restaurant.currency)}
                   </span>
                 )}
               </div>
 
               {selectedItem.description && (
-                <p
-                  className="text-sm leading-relaxed"
-                  style={{ color: "var(--menu-foreground)", opacity: 0.85 }}
-                >
+                <p className="text-sm leading-relaxed text-muted-foreground">
                   {selectedItem.description}
                 </p>
-              )}
-
-              {selectedItem.tags && selectedItem.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedItem.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-medium border"
-                      style={{
-                        backgroundColor: "var(--menu-muted)",
-                        borderColor: "var(--menu-muted)",
-                        color: "var(--menu-foreground)",
-                        opacity: 0.9,
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
               )}
 
               {!selectedItem.is_available && (
@@ -672,11 +620,11 @@ export function PublicMenu({
                 </div>
               )}
 
-              <div className="flex gap-2.5 pt-2">
+              <div className="flex gap-2 pt-2">
                 {rawWhatsapp && selectedItem.is_available && (
                   <Button
                     asChild
-                    className="flex-1 gap-2 bg-[#25D366] text-white hover:bg-[#20bd5a] font-bold rounded-xl h-11 shadow-sm"
+                    className="flex-1 gap-2 bg-[#25D366] text-white hover:bg-[#20bd5a] font-bold rounded-xl"
                   >
                     <a
                       href={getWhatsAppOrderLink(selectedItem) ?? "#"}
@@ -684,18 +632,14 @@ export function PublicMenu({
                       rel="noopener noreferrer"
                     >
                       <MessageCircleIcon className="size-4" />
-                      طلب عبر واتساب
+                      طلب هذا الطبق عبر واتساب
                     </a>
                   </Button>
                 )}
                 <Button
                   variant="outline"
                   onClick={() => setSelectedItem(null)}
-                  className="px-5 rounded-xl h-11 font-medium border"
-                  style={{
-                    borderColor: "var(--menu-muted)",
-                    color: "var(--menu-foreground)",
-                  }}
+                  className="px-4 rounded-xl"
                 >
                   إغلاق
                 </Button>
