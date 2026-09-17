@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# منيو | MenuQR
 
-## Getting Started
+منصة متعددة المطاعم لتحويل صورة المنيو إلى **منيو إلكتروني** أنيق، مع:
+- استخراج الأصناف والأسعار من الصورة بالذكاء الاصطناعي (Google Gemini).
+- اقتراح ثيمات ألوان تلقائية + تخصيص يدوي مع ضمان التباين (WCAG AA).
+- **رمز QR دائم** ورابط عام قابل للتعديل دون كسر الرمز المطبوع.
 
-First, run the development server:
+## التقنيات
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+| الطبقة | الاختيار |
+|---|---|
+| Framework | Next.js 16 (App Router, Turbopack) + TypeScript |
+| UI | Tailwind CSS v4 + shadcn/ui (RTL) + خط IBM Plex Sans Arabic |
+| Backend | Supabase (Postgres + RLS + Auth + Storage) |
+| AI | Google Gemini (`@google/genai`) — server-only |
+| QR | `qrcode` (SVG + PNG + لوحة طاولة) |
+| Deploy | Vercel + Supabase Cloud |
+
+## كيف يعمل ثبات رمز QR
+
+```
+QR يشفّر دائماً:   https://<site>/q/<restaurant-uuid>   ← لا يتغير أبداً
+                              │
+                              ▼
+GET /q/[id]  →  يقرأ الـ slug الحالي  →  redirect  →  /m/<slug>
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- الـ `slug` للعرض والـ SEO فقط؛ تغييره لا يمسّ الرمز.
+- جدول `slugs` يسجّل كل الروابط السابقة، و`/m/<old-slug>` يُحوَّل (301 فعلياً) إلى الرابط الحالي.
+- `slug_available` و`set_restaurant_slug` دالتان في Postgres تضمنان التفرد والذرّية.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## الإعداد
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. متغيرات البيئة
 
-## Learn More
+انسخ `.env.example` إلى `.env.local` واملأ:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...        # للسوبر أدمن فقط، لا يُرسل للمتصفح
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-2.5-flash
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 2. قاعدة البيانات
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+نفّذ `supabase/migrations/0001_init.sql` في Supabase SQL Editor (أو `supabase db push`).
+ينشئ الجداول، سياسات RLS، الدوال، وbuckets التخزين.
 
-## Deploy on Vercel
+### 3. تسجيل الدخول بجوجل
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. أنشئ OAuth Client في Google Cloud Console.
+2. Redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`.
+3. Supabase Dashboard → Authentication → Providers → Google: الصق Client ID/Secret.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 4. التشغيل
+
+```bash
+npm install
+npm run dev      # http://localhost:3000
+```
+
+> أول مستخدم يسجّل دخوله يصبح `super_admin` تلقائياً (عبر trigger `handle_new_user`)، والبقية `owner`.
+
+## الأوامر
+
+```bash
+npm run dev        # تطوير
+npm run build      # بناء إنتاجي
+npm run lint       # ESLint
+npx tsc --noEmit   # فحص الأنواع
+```
+
+## البنية
+
+```
+src/
+├── app/
+│   ├── page.tsx                 # الهبوط
+│   ├── login/                   # دخول جوجل
+│   ├── auth/callback/           # مبادلة الكود بجلسة
+│   ├── onboarding/              # إنشاء المطعم
+│   ├── dashboard/               # (menu | import | appearance | qr | settings)
+│   ├── admin/                   # لوحة السوبر أدمن
+│   ├── m/[slug]/                # المنيو العام (يشمل redirect للروابط القديمة)
+│   ├── q/[id]/                  # نقطة QR الدائمة
+│   ├── api/extract/             # صورة مدخلات ← JSON (Gemini)
+│   ├── api/suggest-palettes/    # اقتراح ثيمات بالـ AI
+│   └── api/qr/[format]/         # تنزيل png | svg | badge
+├── components/                  # dashboard | public | admin | ui
+├── lib/
+│   ├── gemini.ts                # استخراج المنيو + اقتراح الألوان
+│   ├── theme.ts                 # حل الثيم + التحقق من التباين
+│   ├── qr.ts                    # توليد الرموز ولوحة الطاولة
+│   ├── dal.ts                   # طبقة الوصول الآمنة (getUser)
+│   ── supabase/                # client | server | admin
+└── proxy.ts                     # Next.js 16 Proxy (بديل middleware)
+```
+
+## ملاحظات أمنية
+
+- مفتاح Gemini على السيرفر فقط؛ لا يصل للعميل.
+- كل مدخل يُتحقق منه بـ zod، ومخرجات النموذج تُنقّى قبل الحفظ.
+- لا تُكتب نتائج الاستخراج في القاعدة إلا بعد مراجعة المستخدم.
+- RLS مفعّل على كل الجداول، والتحقق من الصلاحيات قريب من البيانات (`dal.ts`).
+- `role` غير قابل للكتابة من العميل (`revoke update (role)`).
