@@ -242,7 +242,7 @@ export function AppearanceEditor({
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="image" className="space-y-3 pt-2">
+                  <TabsContent value="image" className="space-y-3 pt-2 w-full max-w-full overflow-hidden">
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -255,7 +255,7 @@ export function AppearanceEditor({
                     />
 
                     {imagePreview ? (
-                      <div className="relative flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row">
+                      <div className="relative flex w-full max-w-full flex-col items-center gap-3.5 overflow-hidden rounded-xl border border-border bg-card p-3.5 sm:flex-row sm:items-center">
                         <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-lg border bg-muted">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -264,8 +264,12 @@ export function AppearanceEditor({
                             className="size-full object-cover"
                           />
                         </div>
-                        <div className="flex-1 min-w-0 text-center sm:text-start">
-                          <p className="truncate font-medium text-sm text-foreground">
+                        <div className="flex w-full min-w-0 flex-1 flex-col items-center sm:items-start text-center sm:text-start overflow-hidden">
+                          <p
+                            className="block w-full max-w-full truncate font-medium text-sm text-foreground"
+                            title={selectedImageFile?.name}
+                            dir="auto"
+                          >
                             {selectedImageFile?.name}
                           </p>
                           <p className="text-xs text-muted-foreground mt-0.5">
@@ -273,11 +277,12 @@ export function AppearanceEditor({
                               ? `${(selectedImageFile.size / (1024 * 1024)).toFixed(2)} MB`
                               : ""}
                           </p>
-                          <div className="mt-2.5 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                          <div className="mt-3 flex w-full flex-col sm:flex-row items-stretch sm:items-center gap-2">
                             <Button
                               size="sm"
                               onClick={extractThemeFromImage}
                               disabled={isExtractingImage}
+                              className="w-full sm:w-auto"
                             >
                               {isExtractingImage ? (
                                 <Loader2Icon className="size-4 animate-spin" />
@@ -296,6 +301,7 @@ export function AppearanceEditor({
                                 if (fileInputRef.current) fileInputRef.current.value = "";
                               }}
                               disabled={isExtractingImage}
+                              className="w-full sm:w-auto"
                             >
                               <XIcon className="size-3.5" />
                               إلغاء
