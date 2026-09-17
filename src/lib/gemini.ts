@@ -76,18 +76,14 @@ const PALETTE_SCHEMA = {
 };
 
 const FALLBACK_MODELS = [
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5-pro",
-  "gemini-2.0-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-pro-preview",
 ];
 
 function getModelCandidates(): string[] {
   const envModel = process.env.GEMINI_MODEL?.trim();
-  const validEnvModel =
-    envModel && envModel !== "gemini-2.5-flash" ? envModel : null;
-
-  const list = [validEnvModel, ...FALLBACK_MODELS].filter(
+  const list = [envModel, ...FALLBACK_MODELS].filter(
     (m): m is string => Boolean(m),
   );
   return Array.from(new Set(list));
